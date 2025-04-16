@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import re
 import difflib
+import requests
 
 @st.cache_data
 def load_data():
@@ -33,41 +34,37 @@ position_map = {
 }
 
 slate_df = pd.DataFrame()
-st.sidebar.title("📂 Upload Slate Batch")
-import\ requests\
-\
-slate_df\ =\ pd\.DataFrame\(\)\
-try:\
-\ \ \ \ url\ =\ "https://raw\.githubusercontent\.com/rawskillz/nba\-playoff\-model/main/slate\.txt"\
-\ \ \ \ response\ =\ requests\.get\(url\)\
-\ \ \ \ response\.raise_for_status\(\)\
-\ \ \ \ lines\ =\ \[line\.strip\(\)\ for\ line\ in\ response\.text\.splitlines\(\)\ if\ line\.strip\(\)\]\
-\ \ \ \ games,\ i\ =\ \[\],\ 0\
-\ \ \ \ while\ i\ <\ len\(lines\)\ \-\ 10:\
-\ \ \ \ \ \ \ \ try:\
-\ \ \ \ \ \ \ \ \ \ \ \ t1,\ t2\ =\ lines\[i\],\ lines\[i\+1\]\
-\ \ \ \ \ \ \ \ \ \ \ \ if\ t1\ not\ in\ team_abbr\ or\ t2\ not\ in\ team_abbr:\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ i\ \+=\ 1\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue\
-\ \ \ \ \ \ \ \ \ \ \ \ spread1\ =\ float\(lines\[i\+2\]\.replace\("\+",\ ""\)\)\
-\ \ \ \ \ \ \ \ \ \ \ \ spread2\ =\ float\(lines\[i\+7\]\.replace\("\+",\ ""\)\)\
-\ \ \ \ \ \ \ \ \ \ \ \ total\ =\ None\
-\ \ \ \ \ \ \ \ \ \ \ \ for\ j\ in\ range\(i,\ i\+14\):\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ 'O\ '\ in\ lines\[j\]\ or\ 'U\ '\ in\ lines\[j\]:\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ total\ =\ float\(re\.findall\(r"\d\+\\.\?\d\*",\ lines\[j\]\)\[0\]\)\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ break\
-\ \ \ \ \ \ \ \ \ \ \ \ games\.append\(\{\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "Team1":\ team_abbr\[t1\],\ "Team2":\ team_abbr\[t2\],\
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "Spread1":\ spread1,\ "Spread2":\ spread2,\ "Total":\ total\
-\ \ \ \ \ \ \ \ \ \ \ \ \}\)\
-\ \ \ \ \ \ \ \ \ \ \ \ i\ \+=\ 14\
-\ \ \ \ \ \ \ \ except:\
-\ \ \ \ \ \ \ \ \ \ \ \ i\ \+=\ 1\
-\ \ \ \ slate_df\ =\ pd\.DataFrame\(games\)\
-\ \ \ \ st\.sidebar\.success\("✅\ Slate\ loaded\ from\ GitHub!"\)\
-\ \ \ \ st\.sidebar\.dataframe\(slate_df\)\
-except:\
-\ \ \ \ st\.sidebar\.warning\("⚠️\ Could\ not\ load\ slate\.txt\ from\ GitHub\."\)
+try:
+    url = "https://raw.githubusercontent.com/rawskillz/nba-playoff-model/main/slate.txt"
+    response = requests.get(url)
+    response.raise_for_status()
+    lines = [line.strip() for line in response.text.splitlines() if line.strip()]
+    games, i = [], 0
+    while i < len(lines) - 10:
+        try:
+            t1, t2 = lines[i], lines[i+1]
+            if t1 not in team_abbr or t2 not in team_abbr:
+                i += 1
+                continue
+            spread1 = float(lines[i+2].replace("+", ""))
+            spread2 = float(lines[i+7].replace("+", ""))
+            total = None
+            for j in range(i, i+14):
+                if 'O ' in lines[j] or 'U ' in lines[j]:
+                    total = float(re.findall(r"\d+\.?\d*", lines[j])[0])
+                    break
+            games.append({
+                "Team1": team_abbr[t1], "Team2": team_abbr[t2],
+                "Spread1": spread1, "Spread2": spread2, "Total": total
+            })
+            i += 14
+        except:
+            i += 1
+    slate_df = pd.DataFrame(games)
+    st.sidebar.success("✅ Slate loaded from GitHub!")
+    st.sidebar.dataframe(slate_df)
+except:
+    st.sidebar.warning("⚠️ Could not load slate.txt from GitHub.")
 
 st.title("🔎 NBA Player Projection Lookup")
 player_query = st.text_input("Search Player", placeholder="e.g. Trae Young")
@@ -78,7 +75,6 @@ stat_column_map = {
     "PR": ["PTS_adj", "REB_adj"], "PA": ["PTS_adj", "AST_adj"],
     "RA": ["REB_adj", "AST_adj"], "PRA": ["PTS_adj", "REB_adj", "AST_adj"]
 }
-stat_to_dvp_suffix = {"Points": "PTS", "Rebounds": "REB", "Assists": "AST"}
 
 if player_query:
     player_names = df["Player"].tolist()
@@ -120,7 +116,6 @@ if player_query:
             if ranks:
                 avg_rank = sum(ranks) / len(ranks)
                 dvp_info[stat] = (f"avg_{stat}", round(avg_rank))
-                # Tiered bonus logic
                 if avg_rank <= 5:
                     bonuses[stat] = 0.06
                 elif avg_rank <= 10:
@@ -135,11 +130,14 @@ if player_query:
         def apply(stat, base, is_pts):
             usage = 1.0
             if mpg >= 30:
-                usage = 1.015
-            elif mpg < 20:
-                usage = 0.95
+                usage = 1.025
+            elif mpg >= 20:
+                usage = 0.985
+            else:
+                usage = 0.93
             val = base * (1 + bonuses[stat])
-            if is_pts: val *= min(ts / 0.57, 1.07)
+            if is_pts:
+                val *= min(ts / 0.57, 1.07)
             return val * pace_factor * blowout_penalty * usage
 
         projections = {
@@ -164,11 +162,11 @@ if player_query:
             ts_mult = min(ts / 0.57, 1.07) if key == "PTS" else 1.0
             dvp_bonus = bonuses[key]
             pace = pace_factor
-            blowout = 0.95 if abs(spread) >= 10 else 1.0
+            blowout = blowout_penalty
             final = round(projections[stat_type], 2)
             explanation = f"Base: {round(base,2)} → TS: x{round(ts_mult,2)} → DvP: +{round(dvp_bonus*100,1)}% → Pace: x{round(pace,2)}"
             if blowout < 1.0:
-                explanation += " → -5% Blowout"
+                explanation += f" → Blowout Penalty x{blowout}"
             explanation += f" → **{final} final**"
             st.write(explanation)
             st.caption(f"⚡ Usage Proxy (PTS/MPG): {round(usage_proxy, 2)}")

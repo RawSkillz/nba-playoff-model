@@ -1,56 +1,28 @@
-Atlanta Hawks
-Orlando Magic
-+5.5
--110
-+180
-O 219
--110
--5.5
--110
--215
-U 219
--110
-7:30pm ET
-More wagers
-Memphis Grizzlies
-Golden State Warriors
-+7
--110
-+265
-O 227.5
--110
--7
--110
--330
-U 227.5
--110
-10:00pm ET
-More wagers
 Miami Heat
 Chicago Bulls
-+1
--106
-+100
-O 219.5
++2
+-112
++110
+O 220
 -110
--1
--114
--118
-U 219.5
+-2
+-108
+-130
+U 220
 -110
 7:30pm ET
 More wagers
 Dallas Mavericks
 Sacramento Kings
-+4.5
--108
-+164
-O 216
--106
--4.5
--112
--196
-U 216
++5
 -114
++172
+O 213.5
+-114
+-5
+-106
+-205
+U 213.5
+-106
 10:00pm ET
 More wagers

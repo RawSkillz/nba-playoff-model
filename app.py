@@ -34,7 +34,8 @@ position_map = {
 
 slate_df = pd.DataFrame()
 st.sidebar.title("📂 Upload Slate Batch")
-import\ requests\
+import requests
+
 \
 slate_df\ =\ pd\.DataFrame\(\)\
 try:\

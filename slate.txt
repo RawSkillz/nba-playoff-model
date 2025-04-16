@@ -1,28 +1,30 @@
 Miami Heat
 Chicago Bulls
-+2
--112
-+110
-O 220
--110
--2
++1.5
 -108
--130
++108
+O 220
+-112
+-1.5
+-112
+-126
 U 220
--110
+-108
 7:30pm ET
+Stats
 More wagers
 Dallas Mavericks
 Sacramento Kings
 +5
--114
-+172
+-112
++176
 O 213.5
 -114
 -5
--106
--205
+-108
+-210
 U 213.5
 -106
 10:00pm ET
+Stats
 More wagers

@@ -34,36 +34,40 @@ position_map = {
 
 slate_df = pd.DataFrame()
 st.sidebar.title("📂 Upload Slate Batch")
-slate_df = pd.DataFrame()
-try:
-    with open("slate.txt", "r", encoding="utf-8") as f:
-        lines = [line.strip() for line in f if line.strip()]
-        games, i = [], 0
-        while i < len(lines) - 10:
-            try:
-                t1, t2 = lines[i], lines[i+1]
-                if t1 not in team_abbr or t2 not in team_abbr:
-                    i += 1
-                    continue
-                spread1 = float(lines[i+2].replace("+", ""))
-                spread2 = float(lines[i+7].replace("+", ""))
-                total = None
-                for j in range(i, i+14):
-                    if 'O ' in lines[j] or 'U ' in lines[j]:
-                        total = float(re.findall(r"\d+\.?\d*", lines[j])[0])
-                        break
-                games.append({
-                    "Team1": team_abbr[t1], "Team2": team_abbr[t2],
-                    "Spread1": spread1, "Spread2": spread2, "Total": total
-                })
-                i += 14
-            except:
-                i += 1
-        slate_df = pd.DataFrame(games)
-        st.sidebar.success("Slate loaded from slate.txt!")
-        st.sidebar.dataframe(slate_df)
-except FileNotFoundError:
-    st.sidebar.warning("No slate.txt file found. Upload manually if needed.")
+import\ requests\
+\
+slate_df\ =\ pd\.DataFrame\(\)\
+try:\
+\ \ \ \ url\ =\ "https://raw\.githubusercontent\.com/rawskillz/nba\-playoff\-model/main/slate\.txt"\
+\ \ \ \ response\ =\ requests\.get\(url\)\
+\ \ \ \ response\.raise_for_status\(\)\
+\ \ \ \ lines\ =\ \[line\.strip\(\)\ for\ line\ in\ response\.text\.splitlines\(\)\ if\ line\.strip\(\)\]\
+\ \ \ \ games,\ i\ =\ \[\],\ 0\
+\ \ \ \ while\ i\ <\ len\(lines\)\ \-\ 10:\
+\ \ \ \ \ \ \ \ try:\
+\ \ \ \ \ \ \ \ \ \ \ \ t1,\ t2\ =\ lines\[i\],\ lines\[i\+1\]\
+\ \ \ \ \ \ \ \ \ \ \ \ if\ t1\ not\ in\ team_abbr\ or\ t2\ not\ in\ team_abbr:\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ i\ \+=\ 1\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue\
+\ \ \ \ \ \ \ \ \ \ \ \ spread1\ =\ float\(lines\[i\+2\]\.replace\("\+",\ ""\)\)\
+\ \ \ \ \ \ \ \ \ \ \ \ spread2\ =\ float\(lines\[i\+7\]\.replace\("\+",\ ""\)\)\
+\ \ \ \ \ \ \ \ \ \ \ \ total\ =\ None\
+\ \ \ \ \ \ \ \ \ \ \ \ for\ j\ in\ range\(i,\ i\+14\):\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ 'O\ '\ in\ lines\[j\]\ or\ 'U\ '\ in\ lines\[j\]:\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ total\ =\ float\(re\.findall\(r"\d\+\\.\?\d\*",\ lines\[j\]\)\[0\]\)\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ break\
+\ \ \ \ \ \ \ \ \ \ \ \ games\.append\(\{\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "Team1":\ team_abbr\[t1\],\ "Team2":\ team_abbr\[t2\],\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "Spread1":\ spread1,\ "Spread2":\ spread2,\ "Total":\ total\
+\ \ \ \ \ \ \ \ \ \ \ \ \}\)\
+\ \ \ \ \ \ \ \ \ \ \ \ i\ \+=\ 14\
+\ \ \ \ \ \ \ \ except:\
+\ \ \ \ \ \ \ \ \ \ \ \ i\ \+=\ 1\
+\ \ \ \ slate_df\ =\ pd\.DataFrame\(games\)\
+\ \ \ \ st\.sidebar\.success\("✅\ Slate\ loaded\ from\ GitHub!"\)\
+\ \ \ \ st\.sidebar\.dataframe\(slate_df\)\
+except:\
+\ \ \ \ st\.sidebar\.warning\("⚠️\ Could\ not\ load\ slate\.txt\ from\ GitHub\."\)
 
 st.title("🔎 NBA Player Projection Lookup")
 player_query = st.text_input("Search Player", placeholder="e.g. Trae Young")
@@ -131,16 +135,11 @@ if player_query:
         def apply(stat, base, is_pts):
             usage = 1.0
             if mpg >= 30:
-                usage = 1.025  # 🔼 +2.5% boost for high-MPG playoff players
-            elif mpg >= 20:
-                usage = 0.985  # 🟨 -1.5% penalty for middle-MPG players (20–29 MPG)
-            else:
-                usage = 0.93   # 🔽 -7% penalty for low-MPG players (<20 MPG)
-
+                usage = 1.015
+            elif mpg < 20:
+                usage = 0.95
             val = base * (1 + bonuses[stat])
-            if is_pts:
-                val *= min(ts / 0.57, 1.07)
-
+            if is_pts: val *= min(ts / 0.57, 1.07)
             return val * pace_factor * blowout_penalty * usage
 
         projections = {
